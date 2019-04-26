@@ -33,7 +33,10 @@
          to_string/2]).
 
 -ifdef(TEST).
--export([normalize_rows_and_cells/2,
+-export([set_default_table_props/2,
+         set_default_row_props/2,
+         set_default_cell_props/2,
+         normalize_rows_and_cells/2,
          compute_cols_widths/1,
          format_cell/1]).
 -endif.
@@ -42,8 +45,14 @@
 -type row() :: stdout_formatter:row().
 -type cell() :: stdout_formatter:cell().
 
--type cells() :: [stdout_formatter:cell() | any()].
+-type normalized_cell() :: #cell{content ::
+                                 stdout_formatter:formatted_block()}.
+-type normalized_row() :: #row{cells :: [normalized_cell()]}.
+
+-type cells() :: [stdout_formatter:cell() | stdout_formatter:formattable()].
 -type rows() :: [stdout_formatter:row() | cells()].
+
+-type padding_value() :: stdout_formatter:padding_value().
 
 -spec format(stdout_formatter:table() | rows()) ->
     stdout_formatter:formatted_block().
@@ -145,7 +154,8 @@ to_internal_struct([_ | _] = Rows) ->
 
 set_default_table_props(#table{props = Props} = Table, InheritedProps) ->
     Defaults = #{border_drawing => ansi,
-                 border_style => thin},
+                 border_style => thin,
+                 cell_padding => 0},
     Props1 = stdout_formatter_utils:set_default_props(Props,
                                                       Defaults,
                                                       InheritedProps),
@@ -166,13 +176,18 @@ set_default_row_props(#row{props = Props} = Row, InheritedProps) ->
 %% @private
 
 set_default_cell_props(#cell{props = Props} = Cell, InheritedProps) ->
-    Defaults = #{title => false},
+    Padding = case InheritedProps of
+                  #{cell_padding := P} -> P;
+                  _                    -> 0
+              end,
+    Defaults = #{title => false,
+                 padding => Padding},
     Props1 = stdout_formatter_utils:set_default_props(Props,
                                                       Defaults,
                                                       InheritedProps),
     Cell#cell{props = Props1}.
 
--spec normalize_rows_and_cells(table(), rows()) -> rows().
+-spec normalize_rows_and_cells(table(), rows()) -> [normalized_row()].
 %% @private
 
 normalize_rows_and_cells(#table{props = TableProps}, Rows) ->
@@ -183,30 +198,37 @@ normalize_rows_and_cells(#table{props = TableProps}, Rows) ->
     %% While here, we also set default properties for rows if they are
     %% missing.
     InheritedProps = stdout_formatter_utils:merge_inherited_props(TableProps),
-    Rows1 = [begin
-                 Row1 = normalize_row(Row, InheritedProps),
-                 #row{cells = Cells, props = RowProps} = Row1,
-                 InheritedProps1 =
-                 stdout_formatter_utils:merge_inherited_props(RowProps),
-                 Cells1 = [normalize_cell(Cell, InheritedProps1)
-                           || Cell <- Cells],
-                 Row1#row{cells = Cells1}
-             end
-             || Row <- Rows],
+    Rows1 = [normalize_row_and_cells(Row, InheritedProps) || Row <- Rows],
 
     %% The second step is to ensure all rows have the same number of
     %% columns. If a row has less, empty cells are appended.
-    fill_missing_cells(Rows1).
+    Rows2 = fill_missing_cells(Rows1),
 
--spec normalize_row(row(), map()) -> row().
+    %% The third step is to compute cell padding when there is an
+    %% isolated cell which has a specific padding (as opposed to cell
+    %% padding set globally at the table level.
+    compute_cells_padding(Rows2).
+
+-spec normalize_row_and_cells(row() | cells(), map()) -> normalized_row().
 %% @private
 
-normalize_row(#row{} = Row, InheritedProps) ->
-    set_default_row_props(Row, InheritedProps);
-normalize_row(Cells, InheritedProps) when is_list(Cells) ->
-    normalize_row(#row{cells = Cells}, InheritedProps).
+normalize_row_and_cells(Row, InheritedProps) ->
+    Row1 = any_to_row_record(Row, InheritedProps),
+    #row{cells = Cells, props = RowProps} = Row1,
+    InheritedProps1 = stdout_formatter_utils:merge_inherited_props(RowProps),
+    Cells1 = [normalize_cell(Cell, InheritedProps1) || Cell <- Cells],
+    Row1#row{cells = Cells1}.
 
--spec normalize_cell(cell(), map()) -> cell().
+-spec any_to_row_record(row() | cells(), map()) -> row().
+%% @private
+
+any_to_row_record(#row{} = Row, InheritedProps) ->
+    set_default_row_props(Row, InheritedProps);
+any_to_row_record(Cells, InheritedProps) when is_list(Cells) ->
+    any_to_row_record(#row{cells = Cells}, InheritedProps).
+
+-spec normalize_cell(cell() | stdout_formatter:formattable(), map()) ->
+    normalized_cell().
 %% @private
 
 normalize_cell(#cell{} = Cell, InheritedProps) ->
@@ -215,7 +237,8 @@ normalize_cell(#cell{} = Cell, InheritedProps) ->
 normalize_cell(Content, InheritedProps) ->
     normalize_cell(#cell{content = Content}, InheritedProps).
 
--spec format_cell(cell()) -> cell().
+-spec format_cell(cell() | stdout_formatter:formattable()) ->
+    normalized_cell().
 %% @private
 
 format_cell(#cell{content = #formatted_block{}} = Cell) ->
@@ -227,15 +250,18 @@ format_cell(#cell{content = Content, props = Props} = Cell) ->
 format_cell(Content) ->
     format_cell(#cell{content = Content}).
 
--spec fill_missing_cells([row()]) -> [row()].
+-spec fill_missing_cells([normalized_row()]) -> [normalized_row()].
 %% @private
 
 fill_missing_cells([]) ->
     [];
 fill_missing_cells(Rows) ->
-    MaxCellsPerRow = lists:max([length(Cells)
-                                || #row{cells = Cells} <- Rows]),
-    EmptyCell = #cell{content = #formatted_block{}},
+    MaxCellsPerRow = lists:max([length(Cells) || #row{cells = Cells} <- Rows]),
+    #row{props = RowProps} = hd(Rows),
+    InheritedProps = stdout_formatter_utils:merge_inherited_props(RowProps),
+    EmptyCell = set_default_cell_props(
+                  #cell{content = #formatted_block{}},
+                  InheritedProps),
     [begin
          CellsCount = length(Cells),
          case CellsCount < MaxCellsPerRow of
@@ -250,7 +276,108 @@ fill_missing_cells(Rows) ->
      end
      || #row{cells = Cells} = Row <- Rows].
 
--spec compute_cols_widths([row()]) -> [non_neg_integer()].
+-spec compute_cells_padding([normalized_row()]) -> [normalized_row()].
+%% @private
+
+compute_cells_padding([#row{cells = Cells} | _] = Rows) ->
+    HorizontalPadding = compute_cells_horizontal_padding(
+                          Rows,
+                          lists:duplicate(length(Cells), {0, 0})),
+    compute_cells_padding1(Rows, HorizontalPadding, []);
+compute_cells_padding([] = Rows) ->
+    Rows.
+
+-spec compute_cells_padding1(
+        [normalized_row()],
+        [{padding_value(), padding_value()}],
+        [normalized_row()]) ->
+    [normalized_row()].
+%% @private
+
+compute_cells_padding1([#row{cells = Cells} = Row | Rest],
+                      HorizontalPadding,
+                      Result) ->
+    VerticalPadding = compute_cells_vertical_padding(Cells, 0, 0),
+    Cells1 = compute_cells_padding2(Cells,
+                                    VerticalPadding,
+                                    HorizontalPadding,
+                                    []),
+    Row1 = Row#row{cells = Cells1},
+    compute_cells_padding1(Rest, HorizontalPadding, [Row1 | Result]);
+compute_cells_padding1([], _, Result) ->
+    lists:reverse(Result).
+
+-spec compute_cells_padding2(
+        [normalized_cell()],
+        {padding_value(), padding_value()},
+        [{padding_value(), padding_value()}],
+        [normalized_cell()]) ->
+    [normalized_cell()].
+%% @private
+
+compute_cells_padding2([#cell{props = Props} = Cell | Rest1],
+                       {Top, Bottom} = VerticalPadding,
+                       [{Left, Right} | Rest2],
+                       Result) ->
+    Props1 = Props#{padding => {Top, Right, Bottom, Left}},
+    Cell1 = Cell#cell{props = Props1},
+    compute_cells_padding2(Rest1, VerticalPadding, Rest2, [Cell1 | Result]);
+compute_cells_padding2([], _, [], Result) ->
+    lists:reverse(Result).
+
+-spec compute_cells_horizontal_padding(
+        [normalized_row()],
+        [{padding_value(), padding_value()}]) ->
+    [{padding_value(), padding_value()}].
+%% @private
+
+compute_cells_horizontal_padding([#row{cells = Cells} | Rest],
+                                 HorizontalPadding) ->
+    HorizontalPadding1 = compute_cells_horizontal_padding1(
+                           Cells,
+                           HorizontalPadding,
+                           []),
+    compute_cells_horizontal_padding(Rest, HorizontalPadding1);
+compute_cells_horizontal_padding([], HorizontalPadding) ->
+    HorizontalPadding.
+
+-spec compute_cells_horizontal_padding1(
+        [normalized_cell()],
+        [{padding_value(), padding_value()}],
+        [{padding_value(), padding_value()}]) ->
+    [{padding_value(), padding_value()}].
+%% @private
+
+compute_cells_horizontal_padding1([Cell | Rest1],
+                                  [{MaxLeft, MaxRight} | Rest2],
+                                  Result) ->
+    Left = get_left_padding(Cell),
+    Right = get_right_padding(Cell),
+    MaxLeft1 = erlang:max(Left, MaxLeft),
+    MaxRight1 = erlang:max(Right, MaxRight),
+    compute_cells_horizontal_padding1(Rest1,
+                                      Rest2,
+                                      [{MaxLeft1, MaxRight1} | Result]);
+compute_cells_horizontal_padding1([], [], Result) ->
+    lists:reverse(Result).
+    
+-spec compute_cells_vertical_padding(
+        [normalized_cell()],
+        padding_value(),
+        padding_value()) ->
+    {padding_value(), padding_value()}.
+%% @private
+
+compute_cells_vertical_padding([Cell | Rest], MaxTop, MaxBottom) ->
+    Top = get_top_padding(Cell),
+    Bottom = get_bottom_padding(Cell),
+    MaxTop1 = erlang:max(Top, MaxTop),
+    MaxBottom1 = erlang:max(Bottom, MaxBottom),
+    compute_cells_vertical_padding(Rest, MaxTop1, MaxBottom1);
+compute_cells_vertical_padding([], MaxTop, MaxBottom) ->
+    {MaxTop, MaxBottom}.
+                               
+-spec compute_cols_widths([normalized_row()]) -> [non_neg_integer()].
 %% @private
 
 compute_cols_widths([]) ->
@@ -260,22 +387,67 @@ compute_cols_widths([#row{cells = Cells} | _] = Rows) ->
     ColsWidths = lists:duplicate(ColsCount, 0),
     do_compute_cols_widths(Rows, ColsWidths).
 
+-spec do_compute_cols_widths([normalized_row()], [non_neg_integer()]) ->
+    [non_neg_integer()].
+%% @private
+
 do_compute_cols_widths([#row{cells = Cells} | Rest], ColsWidths) ->
     ColsWidths1 = lists:zipwith(
                     fun(#cell{content =
                               #formatted_block{
-                                 props = #{width := CurrentWidth}}},
+                                 props = #{width := CurrentWidth}}} = Cell,
                         MaxWidth) ->
-                            case CurrentWidth > MaxWidth of
-                                true  -> CurrentWidth;
-                                false -> MaxWidth
-                            end
+                            LeftPadding = get_left_padding(Cell),
+                            RightPadding = get_right_padding(Cell),
+                            CurrentWidth1 =
+                            CurrentWidth + LeftPadding + RightPadding,
+                            erlang:max(CurrentWidth1, MaxWidth)
                     end, Cells, ColsWidths),
     do_compute_cols_widths(Rest, ColsWidths1);
 do_compute_cols_widths([], ColsWidths) ->
     ColsWidths.
 
--spec format_lines(table(), [row()], [non_neg_integer()]) ->
+-spec get_top_padding(normalized_cell()) -> padding_value().
+%% @private
+
+get_top_padding(#cell{props = #{padding := {Padding, _, _, _}}}) ->
+    Padding;
+get_top_padding(#cell{props = #{padding := {Padding, _}}}) ->
+    Padding;
+get_top_padding(#cell{props = #{padding := Padding}}) ->
+    Padding.
+
+-spec get_right_padding(normalized_cell()) -> padding_value().
+%% @private
+
+get_right_padding(#cell{props = #{padding := {_, Padding, _, _}}}) ->
+    Padding;
+get_right_padding(#cell{props = #{padding := {_, Padding}}}) ->
+    Padding;
+get_right_padding(#cell{props = #{padding := Padding}}) ->
+    Padding.
+
+-spec get_bottom_padding(normalized_cell()) -> padding_value().
+%% @private
+
+get_bottom_padding(#cell{props = #{padding := {_, _, Padding, _}}}) ->
+    Padding;
+get_bottom_padding(#cell{props = #{padding := {Padding, _}}}) ->
+    Padding;
+get_bottom_padding(#cell{props = #{padding := Padding}}) ->
+    Padding.
+
+-spec get_left_padding(normalized_cell()) -> padding_value().
+%% @private
+
+get_left_padding(#cell{props = #{padding := {_, _, _, Padding}}}) ->
+    Padding;
+get_left_padding(#cell{props = #{padding := {_, Padding}}}) ->
+    Padding;
+get_left_padding(#cell{props = #{padding := Padding}}) ->
+    Padding.
+
+-spec format_lines(table(), [normalized_row()], [non_neg_integer()]) ->
     {[stdout_formatter:formatted_line()],
      non_neg_integer(),
      non_neg_integer()}.
@@ -339,7 +511,7 @@ format_lines(Table,
      FinalWidth,
      FinalHeight + BorderHeight}.
 
--spec format_lines1(table(), row()) ->
+-spec format_lines1(table(), normalized_row()) ->
     {[stdout_formatter:formatted_line()],
      non_neg_integer(),
      non_neg_integer()}.
@@ -355,7 +527,7 @@ format_lines1(Table,
                                                  Table, CellHeight),
     format_lines2(Table, Row, Cells, BorderLines, BorderWidth, BorderHeight).
 
--spec format_lines2(table(), row(), [cell()],
+-spec format_lines2(table(), normalized_row(), [normalized_cell()],
                     [stdout_formatter:formatted_line()],
                     non_neg_integer(), non_neg_integer()) ->
     {[stdout_formatter:formatted_line()],
@@ -400,17 +572,20 @@ format_lines2(Table,
 format_lines2(_, _, [], FinalLines, FinalWidth, FinalHeight) ->
     {FinalLines, FinalWidth, FinalHeight}.
 
--spec add_cell_padding(table(), row(), [non_neg_integer()]) ->
-    row().
+-spec add_cell_padding(table(), normalized_row(), [non_neg_integer()]) ->
+    normalized_row().
 %% @private
 
 add_cell_padding(Table, #row{cells = Cells} = Row, ColsWidths) ->
     add_cell_horizontal_padding(Table, Row, Cells, ColsWidths, 0, []).
 
--spec add_cell_horizontal_padding(table(), row(), [cell()],
-                                  [non_neg_integer()], non_neg_integer(),
-                                  [cell()]) ->
-    row().
+-spec add_cell_horizontal_padding(table(),
+                                  normalized_row(),
+                                  [normalized_cell()],
+                                  [non_neg_integer()],
+                                  non_neg_integer(),
+                                  [normalized_cell()]) ->
+    normalized_row().
 %% @private
 
 add_cell_horizontal_padding(
@@ -423,12 +598,19 @@ add_cell_horizontal_padding(
   [ColWidth | Rest2],
   MaxRowHeight,
   PaddedCells) ->
+    LeftPaddingW = get_left_padding(Cell),
+    LeftPadding = lists:duplicate(LeftPaddingW, $\s),
     PaddedLines = [begin
                        #{width := LWidth} = LProps,
-                       Padding = ColWidth - LWidth,
+                       Padding = ColWidth - LWidth - LeftPaddingW,
                        Line#formatted_line{
-                         content = [LContent, lists:duplicate(Padding, $\s)],
-                         props = LProps#{width => LWidth + Padding}}
+                         content = [LeftPadding,
+                                    LContent,
+                                    lists:duplicate(Padding, $\s)],
+                         props = LProps#{width =>
+                                         LWidth +
+                                         Padding +
+                                         LeftPaddingW}}
                    end
                    || #formatted_line{content = LContent,
                                       props = LProps} = Line <- Lines],
@@ -436,10 +618,7 @@ add_cell_horizontal_padding(
     PaddedCell = Cell#cell{
                    content = Content#formatted_block{lines = PaddedLines,
                                                      props = Props1}},
-    MaxRowHeight1 = case CellHeight > MaxRowHeight of
-                        true  -> CellHeight;
-                        false -> MaxRowHeight
-                    end,
+    MaxRowHeight1 = erlang:max(CellHeight, MaxRowHeight),
     add_cell_horizontal_padding(Table,
                                 Row,
                                 Rest1,
@@ -449,10 +628,12 @@ add_cell_horizontal_padding(
 add_cell_horizontal_padding(Table, Row, [], [], MaxRowHeight, PaddedCells) ->
     add_cell_vertical_padding(Table, Row, PaddedCells, MaxRowHeight, []).
 
--spec add_cell_vertical_padding(table(), row(), [cell()],
+-spec add_cell_vertical_padding(table(),
+                                normalized_row(),
+                                [normalized_cell()],
                                 non_neg_integer(),
-                                [cell()]) ->
-    row().
+                                [normalized_cell()]) ->
+    normalized_row().
 %% @private
 
 add_cell_vertical_padding(
@@ -465,7 +646,10 @@ add_cell_vertical_padding(
         } = Cell | Rest],
   RowHeight,
   PaddedCells) ->
-    PaddedCell = case CellHeight < RowHeight of
+    TopPaddingH = get_top_padding(Cell),
+    BottomPaddingH = get_bottom_padding(Cell),
+    RowHeight1 = RowHeight + TopPaddingH + BottomPaddingH,
+    PaddedCell = case CellHeight < RowHeight1 of
                      true ->
                          EmptyContent = lists:duplicate(CellWidth, $\s),
                          EmptyProps = #{width => CellWidth,
@@ -473,12 +657,14 @@ add_cell_vertical_padding(
                          EmptyLine = #formatted_line{
                                         content = EmptyContent,
                                         props = EmptyProps},
-                         PaddedLines = lists:append(
-                                         Lines,
-                                         lists:duplicate(
-                                           RowHeight - CellHeight,
-                                           EmptyLine)),
-                         Props1 = Props#{height => RowHeight},
+                         PaddedLines = lists:duplicate(TopPaddingH,
+                                                          EmptyLine) ++
+                                       Lines ++
+                                       lists:duplicate(RowHeight
+                                                       - CellHeight
+                                                       + BottomPaddingH,
+                                                       EmptyLine),
+                         Props1 = Props#{height => RowHeight1},
                          Cell#cell{
                            content =
                            Content#formatted_block{lines = PaddedLines,

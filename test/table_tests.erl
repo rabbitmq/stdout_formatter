@@ -293,41 +293,53 @@ compute_cols_widths_test() ->
        stdout_formatter_table:compute_cols_widths([#row{}, #row{}])),
     ?assertEqual(
        [0],
-       stdout_formatter_table:compute_cols_widths([#row{cells = [#cell{}]}])),
+       stdout_formatter_table:compute_cols_widths(
+         [#row{cells = [set_default_props(#cell{})]}])),
     ?assertEqual(
        [0],
-       stdout_formatter_table:compute_cols_widths([#row{cells = [#cell{}]},
-                                                   #row{cells = [#cell{}]}])),
+       stdout_formatter_table:compute_cols_widths(
+         [#row{cells = [set_default_props(#cell{})]},
+          #row{cells = [set_default_props(#cell{})]}])),
     ?assertEqual(
        [3],
        stdout_formatter_table:compute_cols_widths(
-         [#row{cells = [stdout_formatter_table:format_cell(a)]},
-          #row{cells = [stdout_formatter_table:format_cell(bcd)]}])),
+         [#row{cells = [format_cell(a)]},
+          #row{cells = [format_cell(bcd)]}])),
     ?assertEqual(
        [3],
        stdout_formatter_table:compute_cols_widths(
-         [#row{cells = [stdout_formatter_table:format_cell(abc)]},
-          #row{cells = [stdout_formatter_table:format_cell(d)]}])),
+         [#row{cells = [format_cell(abc)]},
+          #row{cells = [format_cell(d)]}])),
     ?assertEqual(
        [0, 3],
        stdout_formatter_table:compute_cols_widths(
-         [#row{cells = [#cell{}, stdout_formatter_table:format_cell(abc)]},
-          #row{cells = [#cell{}, stdout_formatter_table:format_cell(d)]}])),
+         [#row{cells = [set_default_props(#cell{}), format_cell(abc)]},
+          #row{cells = [set_default_props(#cell{}), format_cell(d)]}])),
     ?assertEqual(
        [3, 0],
        stdout_formatter_table:compute_cols_widths(
-         [#row{cells = [stdout_formatter_table:format_cell(abc), #cell{}]},
-          #row{cells = [stdout_formatter_table:format_cell(d), #cell{}]}])),
+         [#row{cells = [format_cell(abc), set_default_props(#cell{})]},
+          #row{cells = [format_cell(d), set_default_props(#cell{})]}])),
     ?assertEqual(
        [1],
        stdout_formatter_table:compute_cols_widths(
-         [#row{cells = [stdout_formatter_table:format_cell("a\nb")]},
-          #row{cells = [stdout_formatter_table:format_cell(c)]}])),
+         [#row{cells = [format_cell("a\nb")]},
+          #row{cells = [format_cell(c)]}])),
     ?assertEqual(
        [3],
        stdout_formatter_table:compute_cols_widths(
-         [#row{cells = [stdout_formatter_table:format_cell("a\nbcd")]},
-          #row{cells = [stdout_formatter_table:format_cell(e)]}])).
+         [#row{cells = [format_cell("a\nbcd")]},
+          #row{cells = [format_cell(e)]}])).
+
+set_default_props(#table{} = Table) ->
+    stdout_formatter_table:set_default_table_props(Table, #{});
+set_default_props(#row{} = Row) ->
+    stdout_formatter_table:set_default_row_props(Row, #{});
+set_default_props(#cell{} = Cell) ->
+    stdout_formatter_table:set_default_cell_props(Cell, #{}).
+
+format_cell(Term) ->
+    set_default_props(stdout_formatter_table:format_cell(Term)).
 
 to_string_test() ->
     ?assertEqual(
@@ -399,4 +411,80 @@ to_string_test() ->
        " B",
        stdout_formatter_table:to_string(
          #table{rows = [["A", "B\nB"]],
-                props = #{border_drawing => none}})).
+                props = #{border_drawing => none}})),
+    ?assertEqual(
+       "+---+---+\n"
+       "|   |   |\n"
+       "| A | B |\n"
+       "|   | B |\n"
+       "|   |   |\n"
+       "+---+---+",
+       stdout_formatter_table:to_string(
+         #table{rows = [["A", "B\nB"]],
+                props = #{border_drawing => ascii,
+                          cell_padding => 1}})),
+    ?assertEqual(
+       "+-+-+\n"
+       "| | |\n"
+       "| | |\n"
+       "|A|B|\n"
+       "| |B|\n"
+       "| | |\n"
+       "| | |\n"
+       "+-+-+",
+       stdout_formatter_table:to_string(
+         #table{rows = [["A", "B\nB"]],
+                props = #{border_drawing => ascii,
+                          cell_padding => {2, 0}}})),
+    ?assertEqual(
+       "+-----+-----+\n"
+       "|  A  |  B  |\n"
+       "|     |  B  |\n"
+       "+-----+-----+",
+       stdout_formatter_table:to_string(
+         #table{rows = [["A", "B\nB"]],
+                props = #{border_drawing => ascii,
+                          cell_padding => {0, 2}}})),
+    ?assertEqual(
+       "+-------+-------+\n"
+       "|       |       |\n"
+       "|    A  |    B  |\n"
+       "|       |    B  |\n"
+       "|       |       |\n"
+       "|       |       |\n"
+       "|       |       |\n"
+       "+-------+-------+",
+       stdout_formatter_table:to_string(
+         #table{rows = [["A", "B\nB"]],
+                props = #{border_drawing => ascii,
+                          cell_padding => {1, 2, 3, 4}}})),
+    ?assertEqual(
+       "+-------+-+\n"
+       "|       | |\n"
+       "|    A  |B|\n"
+       "|       |B|\n"
+       "|       | |\n"
+       "|       | |\n"
+       "|       | |\n"
+       "+-------+-+",
+       stdout_formatter_table:to_string(
+         #table{rows = [[#cell{content = "A",
+                               props = #{padding => {1, 2, 3, 4}}},
+                         "B\nB"]],
+                props = #{border_drawing => ascii}})),
+    ?assertEqual(
+       "+-+-------+\n"
+       "|a|    b  |\n"
+       "+-+-------+\n"
+       "| |       |\n"
+       "|c|    d  |\n"
+       "| |       |\n"
+       "| |       |\n"
+       "| |       |\n"
+       "+-+-------+",
+       stdout_formatter_table:to_string(
+         #table{rows = [[a, b],
+                        [c,
+                         #cell{content = "d",
+                               props = #{padding => {1, 2, 3, 4}}}]],
+                props = #{border_drawing => ascii}})).

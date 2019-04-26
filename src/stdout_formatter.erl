@@ -114,6 +114,7 @@
 
 -type table_props() :: #{border_drawing => border_drawing(),
                          border_style => border_style(),
+                         cell_padding => padding(),
                          inherited => map()}.
 %% Table properties.
 %%
@@ -134,6 +135,13 @@
 
 -type border_style() :: thin.
 %% The style of borders.
+
+-type padding_value() :: non_neg_integer().
+-type padding() :: padding_value() |
+                   {padding_value(), padding_value()} |
+                   {padding_value(), padding_value(),
+                    padding_value(), padding_value()}.
+%% The number of columns/lines of horizontal/vertical padding.
 
 -type row() :: #row{}.
 %% A row in a table.
@@ -158,6 +166,7 @@
 %% See {@link table/0}.
 
 -type cell_props() :: #{title => boolean(),
+                        padding => padding(),
                         inherited => map()}.
 %% Cell properties.
 %%
