@@ -424,17 +424,22 @@ concat_formatted_subterms(
                             width => LastLineWidth + FirstNewLineWidth,
                             reformat_ok => LastLineRefmt1}},
 
-    %% We also indent the remaining lines of the new block so it keeps
-    %% its internal alignement.
-    Padding = lists:duplicate(LastLineWidth, $\s),
-    NewLines1 = [NewLine#formatted_line{
-                   content = [Padding, NewLineContent],
-                   props = NewLineProps#{
-                             width => LastLineWidth + NewLineWidth}}
-                 || #formatted_line{content = NewLineContent,
-                                    props = #{width := NewLineWidth} =
-                                    NewLineProps} =
-                    NewLine <- NewLines],
+    NewLines1 = case LastLineRefmt1 of
+                    false ->
+                        %% We also indent the remaining lines of the new
+                        %% block so it keeps its internal alignement.
+                        Padding = lists:duplicate(LastLineWidth, $\s),
+                        [NewLine#formatted_line{
+                           content = [Padding, NewLineContent],
+                           props = NewLineProps#{
+                                     width => LastLineWidth + NewLineWidth}}
+                         || #formatted_line{content = NewLineContent,
+                                            props = #{width := NewLineWidth} =
+                                            NewLineProps} =
+                            NewLine <- NewLines];
+                    _ ->
+                        NewLines
+                end,
 
     Lines1 = lists:reverse([LastLine1 | RevLines]) ++ NewLines1,
 
