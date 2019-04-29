@@ -388,7 +388,6 @@ format_subterms(#paragraph{content = Subterms, props = Props}) ->
                                 [stdout_formatter:format(Subterms,
                                                          InheritedProps1)]
                         end,
-    io:format("Formatted: ~p~n", [FormattedSubterms]),
     concat_formatted_subterms(FormattedSubterms, #formatted_block{}).
 
 -spec concat_formatted_subterms([stdout_formatter:formatted_block()],
