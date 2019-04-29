@@ -209,7 +209,8 @@ apply_format_string(#paragraph{content = Content,
     {Width, Height} = stdout_formatter_utils:compute_text_block_size(Lines2),
 
     FormattedLines = [begin
-                          LWidth = string:length(Line),
+                          LWidth = stdout_formatter_utils:displayed_length(
+                                     Line),
                           #formatted_line{
                              content = Line,
                              props = #{width => LWidth,
@@ -655,8 +656,8 @@ wrap_chunk(Chunk, _, MaxWidth, force) ->
     %% failed.
     LeftPart = string:trim(string:slice(Chunk, 0, MaxWidth), trailing),
     RightPart = string:trim(string:slice(Chunk, MaxWidth), leading),
-    {{LeftPart, string:length(LeftPart)},
-     {RightPart, string:length(RightPart)}};
+    {{LeftPart, stdout_formatter_utils:displayed_length(LeftPart)},
+     {RightPart, stdout_formatter_utils:displayed_length(RightPart)}};
 wrap_chunk(Chunk, Width, MaxWidth, WrapOn) when Width >= MaxWidth ->
     %% The caller wants to split the string so the left part is
     %% `MaxWidth' columns at most. Therefore we split it at this mark
@@ -669,14 +670,15 @@ wrap_chunk(Chunk, Width, MaxWidth, WrapOn) when Width >= MaxWidth ->
             %% A space was found and `RightPart0' is the substring
             %% starting from it. We have to use that to recover the
             %% index of that space character.
-            Index = MaxWidth - string:length(RightPart0),
+            Index = MaxWidth - stdout_formatter_utils:displayed_length(
+                                 RightPart0),
 
             %% Now that we have the position of the space character, we
             %% can split the original string at that index.
             LeftPart = string:trim(string:slice(Chunk, 0, Index), trailing),
             RightPart = string:trim(string:slice(Chunk, Index), leading),
-            {{LeftPart, string:length(LeftPart)},
-             {RightPart, string:length(RightPart)}}
+            {{LeftPart, stdout_formatter_utils:displayed_length(LeftPart)},
+             {RightPart, stdout_formatter_utils:displayed_length(RightPart)}}
     end.
 
 -spec maybe_reapply_color(stdout_formatter:content_if_reformat(),

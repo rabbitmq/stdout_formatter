@@ -128,7 +128,15 @@ colors_test() ->
          #paragraph{content = "Bold + colors",
                     props = #{bold => true,
                               fg => red,
-                              bg => green}})).
+                              bg => green}})),
+    ?assertEqual(
+       #formatted_block{
+          lines = [#formatted_line{
+                      content = ["\e[1;33mYellow!\e[0m"],
+                      props = #{reformat_ok => [{["\e[1;33mYellow!\e[0m"],7}],
+                                width => 7}}],
+          props = #{height => 1,width => 7}},
+       stdout_formatter_paragraph:format("\e[1;33mYellow!\e[0m")).
 
 wrap_test() ->
     ?assertEqual(

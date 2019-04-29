@@ -27,7 +27,9 @@
          merge_inherited_props/1,
          split_lines/1,
          expand_tabs/1,
-         compute_text_block_size/1]).
+         compute_text_block_size/1,
+         displayed_length/1,
+         remove_escape_sequences/1]).
 
 -define(TAB_SIZE, 8).
 
@@ -115,7 +117,7 @@ expand_tabs(Line) ->
 do_expand_tabs([Part], ExpandedParts) ->
     lists:reverse([Part | ExpandedParts]);
 do_expand_tabs([Part | Rest], ExpandedParts) ->
-    Width = string:length(Part),
+    Width = displayed_length(Part),
     Padding = ?TAB_SIZE - (Width rem 8),
     ExpandedPart = [Part, lists:duplicate(Padding, $\s)],
     do_expand_tabs(Rest, [ExpandedPart | ExpandedParts]).
@@ -142,7 +144,7 @@ compute_text_block_size(Lines) when is_list(Lines) ->
 %% @private
 
 compute_text_block_size([Line | Rest], MaxWidth, MaxHeight) ->
-    Width = string:length(Line),
+    Width = displayed_length(Line),
     NewMaxWidth = case Width > MaxWidth of
                       true  -> Width;
                       false -> MaxWidth
@@ -150,3 +152,10 @@ compute_text_block_size([Line | Rest], MaxWidth, MaxHeight) ->
     compute_text_block_size(Rest, NewMaxWidth, MaxHeight + 1);
 compute_text_block_size([], MaxWidth, MaxHeight) ->
     {MaxWidth, MaxHeight}.
+
+displayed_length(Line) ->
+    WithoutEscSeq = remove_escape_sequences(Line),
+    string:length(WithoutEscSeq).
+
+remove_escape_sequences(Line) ->
+    re:replace(Line, "\e\\[[^m]+m", "", [global, {return, list}]).
