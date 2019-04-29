@@ -62,32 +62,32 @@ format(Term, InheritedProps) ->
 %%
 %% @see stdout_formatter:to_string/1.
 
-to_string(Table) ->
-    to_string(Table, #{}).
+to_string(Para) ->
+    to_string(Para, #{}).
 
 -spec to_string(stdout_formatter:formattable(), map()) -> unicode:chardata().
 %% @doc Formats a paragraph and returns a string.
 %%
 %% @see stdout_formatter:to_string/2.
 
-to_string(Table, InheritedProps) ->
-    stdout_formatter:to_string(format(Table, InheritedProps)).
+to_string(Para, InheritedProps) ->
+    stdout_formatter:to_string(format(Para, InheritedProps)).
 
 -spec display(stdout_formatter:formattable()) -> ok.
 %% @doc Formats a paragraph and displays it on `stdout'.
 %%
 %% @see stdout_formatter:display/1.
 
-display(Rows) ->
-    display(Rows, #{}).
+display(Para) ->
+    display(Para, #{}).
 
 -spec display(stdout_formatter:formattable(), map()) -> ok.
 %% @doc Formats a paragraph and displays it on `stdout'.
 %%
 %% @see stdout_formatter:display/2.
 
-display(Rows, InheritedProps) ->
-    stdout_formatter:display(format(Rows, InheritedProps)).
+display(Para, InheritedProps) ->
+    stdout_formatter:display(format(Para, InheritedProps)).
 
 -spec to_internal_struct(term()) -> paragraph().
 %% @private
