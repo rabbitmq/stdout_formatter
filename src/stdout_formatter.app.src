@@ -2,7 +2,7 @@
 
 {application, stdout_formatter,
  [{description, "Tools to format paragraphs, lists and tables as plain text"},
-  {vsn, "0.1.0"},
+  {vsn, "0.2.0"},
   {registered, []},
   {applications, [kernel, stdlib]},
   {env, []},
