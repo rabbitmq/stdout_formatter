@@ -88,7 +88,7 @@
 %% be specified as a property (See {@link paragraph_props/0}). If it is
 %% missing, it will be guessed from the Erlang term.
 
--type paragraph_props() :: #{format => string() | none | subterm,
+-type paragraph_props() :: #{format => string() | none | subterms,
                              wrap_at => pos_integer() | false,
                              bold => boolean(),
                              fg => color() | none,
@@ -288,6 +288,8 @@ format(Term) ->
 %% @param InheritedProps Inherited properties map.
 %% @returns A {@link formatted_block/0}.
 
+format(#formatted_block{} = Formatted, _) ->
+    Formatted;
 format(#table{} = Table, InheritedProps) ->
     stdout_formatter_table:format(Table, InheritedProps);
 format(Term, InheritedProps) ->

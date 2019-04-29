@@ -130,10 +130,10 @@ maybe_set_format_string(#paragraph{content = Content, props = Props} = Para)
     Para#paragraph{props = Props#{format => "~f"}};
 maybe_set_format_string(#paragraph{content = #formatted_block{},
                                    props = Props} = Para) ->
-    Para#paragraph{props = Props#{format => subterm}};
+    Para#paragraph{props = Props#{format => subterms}};
 maybe_set_format_string(#paragraph{content = #table{},
                                    props = Props} = Para) ->
-    Para#paragraph{props = Props#{format => subterm}};
+    Para#paragraph{props = Props#{format => subterms}};
 maybe_set_format_string(#paragraph{content = Content, props = Props} = Para)
   when is_list(Content) ->
     try
@@ -148,7 +148,7 @@ maybe_set_format_string(#paragraph{content = Content, props = Props} = Para)
         end
     catch
         _:badarg ->
-            Para#paragraph{props = Props#{format => subterm}}
+            Para#paragraph{props = Props#{format => subterms}}
     end;
 maybe_set_format_string(#paragraph{content = Content, props = Props} = Para)
   when is_binary(Content) ->
@@ -167,7 +167,7 @@ maybe_set_format_string(#paragraph{props = Props} = Para) ->
 -spec do_format(paragraph()) -> stdout_formatter:formatted_block().
 %% @private
 
-do_format(#paragraph{props = #{format := subterm}} = Para) ->
+do_format(#paragraph{props = #{format := subterms}} = Para) ->
     FormattedBlock = format_subterms(Para),
     do_format1(Para, FormattedBlock);
 do_format(#paragraph{} = Para) ->
@@ -182,9 +182,14 @@ do_format1(#paragraph{props = Props},
            #formatted_block{lines = FormattedLines,
                             props = BlockProps} = FormattedBlock) ->
     FormattedLines1 = wrap_long_lines(FormattedLines, Props),
-    Width = lists:max([LWidth
-                       || #formatted_line{props = #{width := LWidth}}
-                          <- FormattedLines1]),
+    Width = case FormattedLines of
+                [] ->
+                    0;
+                _ ->
+                    lists:max([LWidth
+                               || #formatted_line{props = #{width := LWidth}}
+                                  <- FormattedLines1])
+            end,
     Height = length(FormattedLines1),
     FormattedBlock#formatted_block{lines = FormattedLines1,
                                    props = BlockProps#{width => Width,
@@ -374,8 +379,16 @@ bg_color({R, G, B})
 format_subterms(#paragraph{content = Subterms, props = Props}) ->
     InheritedProps = stdout_formatter_utils:merge_inherited_props(Props),
     InheritedProps1 = maps:remove(wrap_at, InheritedProps),
-    FormattedSubterms = [stdout_formatter:format(Subterm, InheritedProps1)
-                         || Subterm <- Subterms],
+    FormattedSubterms = case is_list(Subterms) of
+                            true ->
+                                [stdout_formatter:format(Subterm,
+                                                         InheritedProps1)
+                                 || Subterm <- Subterms];
+                            false ->
+                                [stdout_formatter:format(Subterms,
+                                                         InheritedProps1)]
+                        end,
+    io:format("Formatted: ~p~n", [FormattedSubterms]),
     concat_formatted_subterms(FormattedSubterms, #formatted_block{}).
 
 -spec concat_formatted_subterms([stdout_formatter:formatted_block()],
