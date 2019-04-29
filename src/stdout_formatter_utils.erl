@@ -27,8 +27,7 @@
          merge_inherited_props/1,
          split_lines/1,
          expand_tabs/1,
-         compute_text_block_size/1,
-         isatty/0]).
+         compute_text_block_size/1]).
 
 -define(TAB_SIZE, 8).
 
@@ -151,24 +150,3 @@ compute_text_block_size([Line | Rest], MaxWidth, MaxHeight) ->
     compute_text_block_size(Rest, NewMaxWidth, MaxHeight + 1);
 compute_text_block_size([], MaxWidth, MaxHeight) ->
     {MaxWidth, MaxHeight}.
-
--spec isatty() -> boolean().
-%% @doc
-%% Guesses if `stdout' it a TTY which handles colors and line drawing.
-%%
-%% Really it only checks if `$TERM' is defined, so it is incorrect
-%% at best. And even if it is set, we have no idea if it has the
-%% appropriate capabilities.
-%%
-%% Consider this function a placeholder for some real code.
-%%
-%% @returns `true' if it is a TTY, `false' otherwise.
-
-isatty() ->
-    case os:getenv("TERM") of
-        %% We don't have access to isatty(3), so let's
-        %% assume that is $TERM is defined, we can use
-        %% colors and drawing characters.
-        false -> false;
-        _     -> true
-    end.
