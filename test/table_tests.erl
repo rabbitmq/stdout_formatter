@@ -488,3 +488,22 @@ to_string_test() ->
                          #cell{content = "d",
                                props = #{padding => {1, 2, 3, 4}}}]],
                 props = #{border_drawing => ascii}})).
+
+format_test() ->
+    ?assertEqual(
+       #formatted_block{
+          lines = [#formatted_line{
+                      content = "\e(0lqk\e(B",
+                      props = #{reformat_ok => false, width => 3}},
+                   #formatted_line{
+                      content = ["\e(0x\e(B",[[],["a"],[]],"\e(0x\e(B"],
+                      props = #{reformat_ok => false, width => 3}},
+                   #formatted_line{
+                      content = "\e(0mqj\e(B",
+                      props = #{reformat_ok => false, width => 3}}
+                  ],
+          props = #{height => 3, width => 3}},
+       stdout_formatter_table:format([[a]])).
+
+display_test() ->
+    ?assertEqual(ok, stdout_formatter_table:display([[a, b]])).

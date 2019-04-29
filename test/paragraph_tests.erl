@@ -25,6 +25,10 @@ formatting_test() ->
        stdout_formatter_paragraph:to_string(atom)),
 
     ?assertEqual(
+       "binary",
+       stdout_formatter_paragraph:to_string(<<"binary">>)),
+
+    ?assertEqual(
        "1",
        stdout_formatter_paragraph:to_string(1)),
 
@@ -39,7 +43,27 @@ formatting_test() ->
     ?assertEqual(
        "1.20",
        stdout_formatter_paragraph:to_string(#paragraph{content = 1.2,
-                                             props = #{format => "~.2.0f"}})).
+                                             props = #{format => "~.2.0f"}})),
+
+    ?assertEqual(
+       "",
+       stdout_formatter_paragraph:to_string(#table{})),
+
+    ?assertEqual(
+       "\e(0lqqqqqk\e(B\n"
+       "\e(0x\e(Btable\e(0x\e(B\n"
+       "\e(0mqqqqqj\e(B",
+       stdout_formatter_paragraph:to_string(#table{rows = [[table]]})),
+
+    ?assertEqual(
+       "Hello World",
+       stdout_formatter_paragraph:to_string(
+         #formatted_block{
+            lines = [#formatted_line{
+                        content = ["Hello World"],
+                        props = #{reformat_ok => [{["Hello World"], 11}],
+                                  width => 11}}],
+            props = #{height => 1, width => 11}})).
 
 concatenation_test() ->
     ?assertEqual(
@@ -58,9 +82,19 @@ colors_test() ->
                                              props = #{fg => blue}})),
 
     ?assertEqual(
+       "\e[38;5;202mOrange fg\e[0m",
+       stdout_formatter_paragraph:to_string(#paragraph{content = "Orange fg",
+                                             props = #{fg => 202}})),
+
+    ?assertEqual(
        "\033[43mYellow bg\033[0m",
        stdout_formatter_paragraph:to_string(#paragraph{content = "Yellow bg",
                                              props = #{bg => yellow}})),
+
+    ?assertEqual(
+       "\e[48;5;202mOrange bg\e[0m",
+       stdout_formatter_paragraph:to_string(#paragraph{content = "Orange bg",
+                                             props = #{bg => 202}})),
 
     ?assertEqual(
        "\033[31;42mRed on green\033[0m",
@@ -166,3 +200,16 @@ colors_and_wrap_test() ->
                                "-----"],
                     props = #{fg => blue,
                               wrap_at => 5}})).
+
+format_test() ->
+    ?assertEqual(
+       #formatted_block{
+          lines = [#formatted_line{
+                      content = ["Hello World"],
+                      props = #{reformat_ok => [{["Hello World"], 11}],
+                                width => 11}}],
+          props = #{height => 1, width => 11}},
+       stdout_formatter_paragraph:format("Hello World")).
+
+display_test() ->
+    ?assertEqual(ok, stdout_formatter_paragraph:display("Hello World!")).

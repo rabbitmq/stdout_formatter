@@ -19,3 +19,6 @@ formatting_test() ->
        stdout_formatter:to_string(
          #table{rows = [[a]],
                 props = #{border_drawing => ascii}})).
+
+display_test() ->
+    ?assertEqual(ok, stdout_formatter:display("Hello World!")).
