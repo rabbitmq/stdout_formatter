@@ -322,14 +322,14 @@ fg_8color(Color) when Color =:= magenta orelse Color =:= 5 -> "35";
 fg_8color(Color) when Color =:= cyan    orelse Color =:= 6 -> "36";
 fg_8color(Color) when Color =:= white   orelse Color =:= 7 -> "37";
 
-fg_8color(Color) when Color =:= brightblack   orelse Color =:=  8 -> "90";
-fg_8color(Color) when Color =:= brightred     orelse Color =:=  9 -> "91";
-fg_8color(Color) when Color =:= brightgreen   orelse Color =:= 10 -> "92";
-fg_8color(Color) when Color =:= brightyellow  orelse Color =:= 11 -> "93";
-fg_8color(Color) when Color =:= brightblue    orelse Color =:= 12 -> "94";
-fg_8color(Color) when Color =:= brightmagenta orelse Color =:= 13 -> "95";
-fg_8color(Color) when Color =:= brightcyan    orelse Color =:= 14 -> "96";
-fg_8color(Color) when Color =:= brightwhite   orelse Color =:= 15 -> "97".
+fg_8color(Color) when Color =:= bright_black   orelse Color =:=  8 -> "90";
+fg_8color(Color) when Color =:= bright_red     orelse Color =:=  9 -> "91";
+fg_8color(Color) when Color =:= bright_green   orelse Color =:= 10 -> "92";
+fg_8color(Color) when Color =:= bright_yellow  orelse Color =:= 11 -> "93";
+fg_8color(Color) when Color =:= bright_blue    orelse Color =:= 12 -> "94";
+fg_8color(Color) when Color =:= bright_magenta orelse Color =:= 13 -> "95";
+fg_8color(Color) when Color =:= bright_cyan    orelse Color =:= 14 -> "96";
+fg_8color(Color) when Color =:= bright_white   orelse Color =:= 15 -> "97".
 
 -spec bg_8color(stdout_formatter:color_8palette()) -> string().
 %% @private
@@ -343,14 +343,14 @@ bg_8color(Color) when Color =:= magenta orelse Color =:= 5 -> "45";
 bg_8color(Color) when Color =:= cyan    orelse Color =:= 6 -> "46";
 bg_8color(Color) when Color =:= white   orelse Color =:= 7 -> "47";
 
-bg_8color(Color) when Color =:= brightblack   orelse Color =:=  8 -> "100";
-bg_8color(Color) when Color =:= brightred     orelse Color =:=  9 -> "101";
-bg_8color(Color) when Color =:= brightgreen   orelse Color =:= 10 -> "102";
-bg_8color(Color) when Color =:= brightyellow  orelse Color =:= 11 -> "103";
-bg_8color(Color) when Color =:= brightblue    orelse Color =:= 12 -> "104";
-bg_8color(Color) when Color =:= brightmagenta orelse Color =:= 13 -> "105";
-bg_8color(Color) when Color =:= brightcyan    orelse Color =:= 14 -> "106";
-bg_8color(Color) when Color =:= brightwhite   orelse Color =:= 15 -> "107".
+bg_8color(Color) when Color =:= bright_black   orelse Color =:=  8 -> "100";
+bg_8color(Color) when Color =:= bright_red     orelse Color =:=  9 -> "101";
+bg_8color(Color) when Color =:= bright_green   orelse Color =:= 10 -> "102";
+bg_8color(Color) when Color =:= bright_yellow  orelse Color =:= 11 -> "103";
+bg_8color(Color) when Color =:= bright_blue    orelse Color =:= 12 -> "104";
+bg_8color(Color) when Color =:= bright_magenta orelse Color =:= 13 -> "105";
+bg_8color(Color) when Color =:= bright_cyan    orelse Color =:= 14 -> "106";
+bg_8color(Color) when Color =:= bright_white   orelse Color =:= 15 -> "107".
 
 -define(is_8bit_int(I), I >= 0 andalso I =< 255).
 
