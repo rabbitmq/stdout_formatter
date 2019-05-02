@@ -13,5 +13,13 @@
   {links, [
            {"GitHub", "https://github.com/rabbitmq/stdout_formatter"}
           ]},
-  {build_tools, ["rebar3"]}
+  {build_tools, ["mix", "rebar3"]},
+  {files, ["include",
+           "LICENSE*",
+           "mix.exs",
+           "README.md",
+           "rebar.config.script",
+           "rebar.config",
+           "rebar.lock",
+           "src"]}
  ]}.
