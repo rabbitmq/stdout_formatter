@@ -10,8 +10,4 @@ defmodule StdoutFormatter.MixProject do
       deps: []
     ]
   end
-
-  def application do
-    []
-  end
 end
