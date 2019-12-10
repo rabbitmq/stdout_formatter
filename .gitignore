@@ -1,3 +1,5 @@
+*.o
 /_build/
 /doc/
+/priv/
 /rebar.lock

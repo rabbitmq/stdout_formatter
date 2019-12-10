@@ -1,15 +1,43 @@
 %% vim:ft=erlang:
 
+Make = case os:find_executable("gmake") of
+           false -> "make";
+           Value -> Value
+       end,
+
+C_SRC_OUTPUT = filename:join(
+                 [filename:absname(filename:dirname(SCRIPT)),
+                  "priv",
+                  "stdout_formatter_nifs.so"]),
+
+CONFIG1 = [{pre_hooks,
+            [{compile,
+              lists:flatten(
+                io_lib:format(
+                  "~s -C c_src"
+                  " C_SRC_OUTPUT=~s",
+                  [Make, C_SRC_OUTPUT]))}]},
+           {post_hooks,
+            [{clean,
+              lists:flatten(
+                io_lib:format(
+                  "~s -C c_src"
+                  " C_SRC_OUTPUT=~s"
+                  " clean",
+                  [Make, C_SRC_OUTPUT]))}]}
+           | CONFIG],
+
 case os:getenv("TRAVIS_JOB_ID") of
-    false -> CONFIG;
+    false -> CONFIG1;
     JobId ->
         %% coveralls.io.
-        [{plugins, [{coveralls,
-                     {git, "https://github.com/markusn/coveralls-erl",
-                      {branch, "master"}}}]}
-        ,{coveralls_coverdata, "_build/test/cover/eunit.coverdata"}
-        ,{coveralls_service_name, "travis-ci"}
-        ,{coveralls_service_job_id, JobId}
-         |CONFIG
+        [{plugins,
+          [{coveralls,
+            {git, "https://github.com/markusn/coveralls-erl",
+             {branch, "master"}}}]},
+         {coveralls_coverdata, "_build/test/cover/eunit.coverdata"},
+         {coveralls_service_name, "travis-ci"},
+         {coveralls_service_job_id, JobId}
+         | CONFIG1
         ]
 end.
