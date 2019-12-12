@@ -1,0 +1,13 @@
+[package]
+name = "stdout_formatter_nifs"
+version = "0.1.0"
+authors = ["Jean-Sébastien Pédron <jean-sebastien@rabbitmq.com>"]
+license = "MIT/Apache-2.0"
+
+[lib]
+name = "stdout_formatter_nifs"
+crate-type = ["dylib"]
+
+[dependencies]
+atty = "0.2"
+rustler = ">=0.21.0"

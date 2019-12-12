@@ -1,31 +1,51 @@
 %% vim:ft=erlang:
 
-Make = case os:find_executable("gmake") of
-           false -> "make";
-           Value -> Value
-       end,
+{Target, IsDefaultTarget} =
+case os:getenv("TARGET") of
+    false ->
+        Cfg = os:cmd("rustc --print cfg"),
+        ReOpts = [{capture, all_but_first, list},
+                  multiline],
+        {match, [Arch]} = re:run(Cfg, "^target_arch=\"([^\"]+)\"", ReOpts),
+        {match, [Vendor]} = re:run(Cfg, "^target_vendor=\"([^\"]+)\"", ReOpts),
+        {match, [OS]} = re:run(Cfg, "^target_os=\"([^\"]+)\"", ReOpts),
+        {match, [Env]} = re:run(Cfg, "^target_env=\"([^\"]*)\"", ReOpts),
+        case Env of
+            "" ->
+                {lists:flatten(io_lib:format("~s-~s-~s", [Arch, Vendor, OS])),
+                 true};
+            _ ->
+                {lists:flatten(io_lib:format("~s-~s-~s-~s", [Arch, Vendor, OS, Env])),
+                 true}
+        end;
+    Value ->
+        {Value, false}
+end,
 
-C_SRC_OUTPUT = filename:join(
-                 [filename:absname(filename:dirname(SCRIPT)),
-                  "priv",
-                  erlang:system_info(system_architecture),
-                  "stdout_formatter_nifs.so"]),
+CrateName = "stdout_formatter_nifs",
+CrateDir = filename:join("crates", CrateName),
+CargoManifest = filename:join(CrateDir, "Cargo.toml"),
+NifsLib = case IsDefaultTarget of
+              true  -> filename:join([CrateDir, "target", "release",
+                                      "lib" ++ CrateName]);
+              false -> filename:join([CrateDir, "target", Target, "release",
+                                      "lib" ++ CrateName])
+          end,
+
+PrivDir = filename:join("priv", Target),
+
+CompileSteps = [{"mkdir -p '~s'", [PrivDir]},
+                {"cargo build --release --target '~s' --manifest-path '~s'", [Target, CargoManifest]},
+                {"echo cp -a '~s'.so '~s'", [NifsLib, PrivDir]}],
+CleanSteps = [{"cargo clean --manifest-path '~s'", [CargoManifest]},
+              {"rm -rf '~s'", [PrivDir]}],
 
 CONFIG1 = [{pre_hooks,
-            [{compile,
-              lists:flatten(
-                io_lib:format(
-                  "~s -C c_src"
-                  " C_SRC_OUTPUT=~s",
-                  [Make, C_SRC_OUTPUT]))}]},
+            [{compile, lists:flatten(io_lib:format(Format, Args))}
+             || {Format, Args} <- CompileSteps]},
            {post_hooks,
-            [{clean,
-              lists:flatten(
-                io_lib:format(
-                  "~s -C c_src"
-                  " C_SRC_OUTPUT=~s"
-                  " clean",
-                  [Make, C_SRC_OUTPUT]))}]}
+            [{clean, lists:flatten(io_lib:format(Format, Args))}
+             || {Format, Args} <- CleanSteps]}
            | CONFIG],
 
 case os:getenv("TRAVIS_JOB_ID") of
