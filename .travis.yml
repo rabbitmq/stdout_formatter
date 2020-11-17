@@ -4,7 +4,8 @@ language: erlang
 sudo: false
 otp_release:
   - 21.3
-  - 20.3
+  - 22.3
+  - 23.0
 
 install:
   - curl -O -L https://s3.amazonaws.com/rebar3/rebar3
