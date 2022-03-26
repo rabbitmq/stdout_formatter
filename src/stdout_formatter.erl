@@ -112,7 +112,7 @@
 %% </ul>
 
 -type border_drawing() :: ansi | ascii | none.
-%% The line drawing technic.
+%% The line drawing technique.
 %%
 %% <ul>
 %% <li>`ansi': borders are drawn with ANSI escape sequences.</li>
