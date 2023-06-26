@@ -9,7 +9,6 @@
 
 -module(stdout_formatter_table).
 
--include_lib("eunit/include/eunit.hrl").
 -include("stdout_formatter.hrl").
 
 -export([format/1,
