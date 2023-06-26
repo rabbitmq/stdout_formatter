@@ -8,7 +8,7 @@
   {env, []},
   {modules, []},
 
-  %% Hex.pm package informations.
+  %% Hex.pm package information.
   {licenses, ["Apache 2.0", "MPL 2.0"]},
   {links, [
            {"GitHub", "https://github.com/rabbitmq/stdout_formatter"}

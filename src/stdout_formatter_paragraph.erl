@@ -427,7 +427,7 @@ concat_formatted_subterms(
     NewLines1 = case LastLineRefmt1 of
                     false ->
                         %% We also indent the remaining lines of the new
-                        %% block so it keeps its internal alignement.
+                        %% block so it keeps its internal alignment.
                         Padding = lists:duplicate(LastLineWidth, $\s),
                         [NewLine#formatted_line{
                            content = [Padding, NewLineContent],
