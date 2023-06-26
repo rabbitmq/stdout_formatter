@@ -1,0 +1,32 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        otp:
+          - "25.3"
+          - "26.0"
+        elixir:
+          - "1.14"
+          - "1.15"
+    steps:
+    - name: CHECKOUT
+      uses: actions/checkout@v3
+    - name: CONFIGURE ERLANG & ELIXIR
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{ matrix.otp }}
+        elixir-version: ${{ matrix.elixir }}
+    - name: MIX COMPILE
+      run: |
+        mix compile
+    - name: REBAR3 eunit
+      run: |
+        rebar3 eunit
